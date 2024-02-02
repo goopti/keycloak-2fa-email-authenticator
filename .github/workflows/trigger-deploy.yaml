@@ -1,4 +1,4 @@
-name: Manual - Build and deploy 2fa-email-authenticator base image to ECR
+name: Build and deploy keycloak/2fa-email-authenticator base image to ECR
 
 on:
   push:
