@@ -31,7 +31,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Parse git tag
-        id: tag-parser
+        id: release
         run: |
           echo version=$(echo ${{ github.ref_name }} | sed 's/^v//') >> $GITHUB_OUTPUT
 
