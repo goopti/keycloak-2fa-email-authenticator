@@ -5,7 +5,7 @@ ADD . .
 
 RUN mvn package
 
-FROM builder as release
+FROM scratch as release
 
 WORKDIR /app
 

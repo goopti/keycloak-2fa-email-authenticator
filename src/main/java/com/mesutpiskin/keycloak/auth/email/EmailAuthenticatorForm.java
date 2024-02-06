@@ -4,7 +4,6 @@ import lombok.extern.jbosslog.JBossLog;
 
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
-import org.keycloak.authentication.AuthenticationFlowException;
 import org.keycloak.email.EmailException;
 import org.keycloak.email.EmailTemplateProvider;
 import org.keycloak.events.Errors;
@@ -51,6 +50,9 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
                 form.setError(error);
             }
         }
+        String email = context.getAuthenticationSession().getAuthNote(EmailConstants.EMAIL);
+        form.setAttribute(EmailConstants.EMAIL, email);
+
         Response response = form.createForm("email-code-form.ftl");
         context.challenge(response);
         return response;
@@ -80,11 +82,29 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
     }
 
     @Override
+    public boolean enabledUser(AuthenticationFlowContext context, UserModel user) {
+        if (this.isDisabledByBruteForce(context, user)) {
+            return false;
+        } else if (user != null && !user.isEnabled()) {
+            context.getEvent().user(user);
+            context.getEvent().error("user_disabled");
+            Response challengeResponse = this.challenge(context, "accountDisabledMessage");
+            context.forceChallenge(challengeResponse);
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    @Override
     public void action(AuthenticationFlowContext context) {
         UserModel userModel = context.getUser();
-        if (!enabledUser(context, userModel)) {
-            // error in context is set in enabledUser/isDisabledByBruteForce
-            return;
+        if (userModel != null) {
+            boolean isUserDisabled = !enabledUser(context, userModel);
+            if (isUserDisabled) {
+                // error in context is set in enabledUser/isDisabledByBruteForce
+                return;
+            }
         }
 
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
@@ -140,7 +160,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
 
     @Override
     public boolean requiresUser() {
-        return true;
+        return false;
     }
 
     @Override
@@ -159,9 +179,9 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
     }
 
     private void sendEmailWithCode(RealmModel realm, UserModel user, String code, int ttl) {
-        if (user.getEmail() == null) {
-            log.warnf("Could not send access code email due to missing email. realm=%s user=%s", realm.getId(), user.getUsername());
-            throw new AuthenticationFlowException(AuthenticationFlowError.INVALID_USER);
+        if (user == null || user.getEmail() == null) {
+            log.warnf("Could not send access code email due to missing user. realm=%s", realm.getId());
+            return;
         }
 
         Map<String, Object> mailBodyAttributes = new HashMap<>();

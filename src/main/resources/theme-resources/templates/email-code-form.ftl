@@ -6,6 +6,10 @@
         <form id="kc-otp-login-form" class="${properties.kcFormClass!}" action="${url.loginAction}"
             method="post">
 
+            <div>
+                <p>Code sent to: ${email}</p>
+            </div>
+
             <div class="${properties.kcFormGroupClass!}">
                 <div class="${properties.kcLabelWrapperClass!}">
                     <label for="emailCode" class="${properties.kcLabelClass!}">${msg("loginOtpOneTime")}</label>
