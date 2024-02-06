@@ -36,7 +36,7 @@ public class PassthroughUsernameForm extends UsernamePasswordForm {
 
   @Override
   protected boolean validateForm(AuthenticationFlowContext context, MultivaluedMap<String, String> formData) {
-    boolean userIsValid = validateUser(context, formData);
+    boolean isUserValid = validateUser(context, formData);
     UserModel user = context.getUser();
 
     String email = formData.getFirst("username");
@@ -53,7 +53,7 @@ public class PassthroughUsernameForm extends UsernamePasswordForm {
     AuthenticationSessionModel session = context.getAuthenticationSession();
     session.setAuthNote(EmailConstants.EMAIL, email);
 
-    return user == null || userIsValid;
+    return user == null || isUserValid;
   }
 
   @Override
