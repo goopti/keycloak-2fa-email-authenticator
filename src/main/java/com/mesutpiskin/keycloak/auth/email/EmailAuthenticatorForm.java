@@ -4,7 +4,7 @@ import lombok.extern.jbosslog.JBossLog;
 
 import org.keycloak.authentication.AuthenticationFlowContext;
 import org.keycloak.authentication.AuthenticationFlowError;
-import org.keycloak.email.EmailException;
+import org.keycloak.authentication.authenticators.util.AuthenticatorUtils;
 import org.keycloak.email.EmailTemplateProvider;
 import org.keycloak.events.Errors;
 import org.keycloak.forms.login.LoginFormsProvider;
@@ -21,9 +21,9 @@ import org.keycloak.common.util.SecretGenerator;
 
 import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.concurrent.CompletableFuture;
+
 
 @JBossLog
 public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
@@ -76,37 +76,33 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
         }
 
         String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
-        sendEmailWithCode(context.getRealm(), context.getUser(), code, ttl);
+
+        UserModel user = context.getUser();
+        RealmModel realm = context.getRealm();
+
+        if (enabledUser(context, user)) {
+            sendEmailWithCodeAsync(realm, user, code, ttl);
+        }
+
         session.setAuthNote(EmailConstants.CODE, code);
         session.setAuthNote(EmailConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
     }
 
-    @Override
-    public boolean enabledUser(AuthenticationFlowContext context, UserModel user) {
-        if (this.isDisabledByBruteForce(context, user)) {
-            return false;
-        } else if (user != null && !user.isEnabled()) {
-            context.getEvent().user(user);
-            context.getEvent().error("user_disabled");
-            Response challengeResponse = this.challenge(context, "accountDisabledMessage");
-            context.forceChallenge(challengeResponse);
-            return false;
-        } else {
-            return true;
-        }
+    private void sendEmailWithCodeAsync(RealmModel realm, UserModel user, String code, int ttl) {
+        EmailTemplateProvider emailTemplateProvider = this.session.getProvider(EmailTemplateProvider.class);
+        EmailProvider emailProvider = new EmailProvider(emailTemplateProvider);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                emailProvider.sendEmailWithCode(realm, user, code, ttl);
+            } catch (Exception e) {
+                log.error(e);
+            }
+        });
     }
 
     @Override
     public void action(AuthenticationFlowContext context) {
-        UserModel userModel = context.getUser();
-        if (userModel != null) {
-            boolean isUserDisabled = !enabledUser(context, userModel);
-            if (isUserDisabled) {
-                // error in context is set in enabledUser/isDisabledByBruteForce
-                return;
-            }
-        }
-
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
         if (formData.containsKey("resend")) {
             resetEmailCode(context);
@@ -120,12 +116,14 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
             return;
         }
 
+        UserModel userModel = context.getUser();
+
         AuthenticationSessionModel session = context.getAuthenticationSession();
         String code = session.getAuthNote(EmailConstants.CODE);
         String ttl = session.getAuthNote(EmailConstants.CODE_TTL);
         String enteredCode = formData.getFirst(EmailConstants.CODE);
 
-        if (enteredCode.equals(code)) {
+        if (enteredCode.equals(code) && enabledUser(context, userModel)) {
             if (Long.parseLong(ttl) < System.currentTimeMillis()) {
                 // expired
                 context.getEvent().user(userModel).error(Errors.EXPIRED_CODE);
@@ -147,6 +145,13 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
                 context.attempted();
             }
         }
+    }
+
+    @Override
+    public boolean enabledUser(AuthenticationFlowContext context, UserModel user) {
+        boolean validUser = user != null && user.isEnabled();
+
+        return validUser && AuthenticatorUtils.getDisabledByBruteForceEventError(context, user) == null;
     }
 
     @Override
@@ -176,29 +181,5 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
     @Override
     public void close() {
         // NOOP
-    }
-
-    private void sendEmailWithCode(RealmModel realm, UserModel user, String code, int ttl) {
-        if (user == null || user.getEmail() == null) {
-            log.warnf("Could not send access code email due to missing user. realm=%s", realm.getId());
-            return;
-        }
-
-        Map<String, Object> mailBodyAttributes = new HashMap<>();
-        mailBodyAttributes.put("username", user.getUsername());
-        mailBodyAttributes.put("code", code);
-        mailBodyAttributes.put("ttl", ttl);
-
-        String realmName = realm.getDisplayName() != null ? realm.getDisplayName() : realm.getName();
-        List<Object> subjectParams = List.of(realmName);
-        try {
-            EmailTemplateProvider emailProvider = session.getProvider(EmailTemplateProvider.class);
-            emailProvider.setRealm(realm);
-            emailProvider.setUser(user);
-            // Don't forget to add the welcome-email.ftl (html and text) template to your theme.
-            emailProvider.send("emailCodeSubject", subjectParams, "code-email.ftl", mailBodyAttributes);
-        } catch (EmailException eex) {
-            log.errorf(eex, "Failed to send access code email. realm=%s user=%s", realm.getId(), user.getUsername());
-        }
     }
 }

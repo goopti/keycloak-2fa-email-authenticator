@@ -58,17 +58,7 @@ public class PassthroughUsernameForm extends UsernamePasswordForm {
 
   @Override
   public boolean enabledUser(AuthenticationFlowContext context, UserModel user) {
-    if (this.isDisabledByBruteForce(context, user)) {
-      return false;
-    } else if (user != null && !user.isEnabled()) {
-      context.getEvent().user(user);
-      context.getEvent().error("user_disabled");
-      Response challengeResponse = this.challenge(context, "accountDisabledMessage");
-      context.forceChallenge(challengeResponse);
-      return false;
-    } else {
-      return true;
-    }
+    return true;
   }
 
   @Override
