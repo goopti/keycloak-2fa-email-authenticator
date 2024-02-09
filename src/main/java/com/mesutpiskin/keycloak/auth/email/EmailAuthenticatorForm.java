@@ -24,7 +24,6 @@ import jakarta.ws.rs.core.Response;
 
 import java.util.concurrent.CompletableFuture;
 
-
 @JBossLog
 public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
     private final KeycloakSession session;
@@ -103,10 +102,20 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
 
     @Override
     public void action(AuthenticationFlowContext context) {
+        UserModel userModel = context.getUser();
+        AuthenticationSessionModel session = context.getAuthenticationSession();
+
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
         if (formData.containsKey("resend")) {
-            resetEmailCode(context);
-            challenge(context, null);
+            int codeResendCount = increaseCodeResendCount(session);
+            boolean resendEmailReached = codeResendLimitReached(context, userModel, codeResendCount);
+
+            if (!resendEmailReached) {
+                resetEmailCode(context);
+                challenge(context, null);
+            }
+
+            // TODO: disable resendCode button!
             return;
         }
 
@@ -116,9 +125,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
             return;
         }
 
-        UserModel userModel = context.getUser();
 
-        AuthenticationSessionModel session = context.getAuthenticationSession();
         String code = session.getAuthNote(EmailConstants.CODE);
         String ttl = session.getAuthNote(EmailConstants.CODE_TTL);
         String enteredCode = formData.getFirst(EmailConstants.CODE);
