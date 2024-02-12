@@ -64,7 +64,7 @@ public class EmailAuthenticatorFormFactory implements AuthenticatorFactory {
                         "The time to live in seconds for the code to be valid.", ProviderConfigProperty.STRING_TYPE,
                         String.valueOf(EmailConstants.DEFAULT_TTL)),
                 new ProviderConfigProperty(EmailConstants.RESEND_CODE_LIMIT, "Resend code limit",
-                        "Resend code limit. Resend code requests after the limit count towards brute force attack.", ProviderConfigProperty.STRING_TYPE,
+                        "Resend code limit. Codes after the reached resend limit are not sent.", ProviderConfigProperty.STRING_TYPE,
                         String.valueOf(EmailConstants.DEFAULT_RESEND_CODE_LIMIT))
         );
     }
