@@ -108,10 +108,10 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
         MultivaluedMap<String, String> formData = context.getHttpRequest().getDecodedFormParameters();
         if (formData.containsKey("resend")) {
             int codeResendCount = ResendCodeLimitService.increaseCodeResendCount(session);
-            boolean resendCodeLimitReached = ResendCodeLimitService.codeResendLimitReached(context.getAuthenticatorConfig(), userModel, codeResendCount);
+            boolean resendCodeLimitReached = ResendCodeLimitService.codeResendLimitReached(context.getAuthenticatorConfig(), codeResendCount);
 
             if (resendCodeLimitReached) {
-                context.getEvent().user(userModel).error(Errors.GENERIC_AUTHENTICATION_ERROR);
+                context.getEvent().user(userModel).error(Errors.SLOW_DOWN);
                 Response challengeResponse = challenge(context, Messages.EMAIL_SENT_ERROR);
                 context.failureChallenge(AuthenticationFlowError.GENERIC_AUTHENTICATION_ERROR, challengeResponse);
 

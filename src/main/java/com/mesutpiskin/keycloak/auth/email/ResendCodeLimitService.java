@@ -1,12 +1,11 @@
 package com.mesutpiskin.keycloak.auth.email;
 
 import org.keycloak.models.AuthenticatorConfigModel;
-import org.keycloak.models.UserModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 
 public class ResendCodeLimitService {
 
-  public static boolean codeResendLimitReached(AuthenticatorConfigModel config, UserModel user, int codeResendCount) {
+  public static boolean codeResendLimitReached(AuthenticatorConfigModel config, int codeResendCount) {
     int codeResendLimit = EmailConstants.DEFAULT_RESEND_CODE_LIMIT;
 
     if (config != null) {
