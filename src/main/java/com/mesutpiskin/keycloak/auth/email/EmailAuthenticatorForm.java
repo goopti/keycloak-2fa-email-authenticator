@@ -1,6 +1,5 @@
 package com.mesutpiskin.keycloak.auth.email;
 
-import jakarta.validation.constraints.Null;
 import lombok.extern.jbosslog.JBossLog;
 
 import org.keycloak.authentication.AuthenticationFlowContext;
@@ -54,7 +53,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
         return createResponse(context, form);
     }
 
-    protected Response challengeSuccess(AuthenticationFlowContext context, String successMessage, String field) {
+    protected Void challengeSuccess(AuthenticationFlowContext context, String successMessage, String field) {
         generateAndSendEmailCode(context);
 
         LoginFormsProvider form = context.form().setExecution(context.getExecution().getId());
@@ -66,7 +65,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
             }
         }
 
-        return createResponse(context, form);
+        createResponse(context, form);
     }
 
     private Response createResponse(AuthenticationFlowContext context, LoginFormsProvider form) {
@@ -140,7 +139,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
             }
 
             resetEmailCode(context);
-            challengeSuccess(context, EmailConstants.CODE_RESENT_SUCCESSFULLY, null);
+            challengeSuccess(context, EmailConstants.CODE_RESENT_SUCCESSFULLY_MESSAGE, null);
 
             return;
         }
