@@ -53,7 +53,7 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
         return createResponse(context, form);
     }
 
-    protected Void challengeSuccess(AuthenticationFlowContext context, String successMessage, String field) {
+    protected void challengeSuccess(AuthenticationFlowContext context, String successMessage, String field) {
         generateAndSendEmailCode(context);
 
         LoginFormsProvider form = context.form().setExecution(context.getExecution().getId());
