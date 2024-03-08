@@ -71,9 +71,12 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
     private Response createResponse(AuthenticationFlowContext context, LoginFormsProvider form) {
         String email = context.getAuthenticationSession().getAuthNote(EmailConstants.EMAIL);
         form.setAttribute(EmailConstants.EMAIL, email);
+        int codeLength = getCodeLength(context.getAuthenticatorConfig());
+        form.setAttribute(EmailConstants.CODE_LENGTH, codeLength);
 
         Response response = form.createForm("email-code-form.ftl");
         context.challenge(response);
+
         return response;
     }
 
@@ -86,13 +89,8 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
             return;
         }
 
-        int length = EmailConstants.DEFAULT_LENGTH;
-        int ttl = EmailConstants.DEFAULT_TTL;
-        if (config != null) {
-            // get config values
-            length = Integer.parseInt(config.getConfig().get(EmailConstants.CODE_LENGTH));
-            ttl = Integer.parseInt(config.getConfig().get(EmailConstants.CODE_TTL));
-        }
+        int length = getCodeLength(config);
+        int ttl = getTtl(config);
 
         String code = SecretGenerator.getInstance().randomString(length, SecretGenerator.DIGITS);
 
@@ -105,6 +103,14 @@ public class EmailAuthenticatorForm extends AbstractUsernameFormAuthenticator {
 
         session.setAuthNote(EmailConstants.CODE, code);
         session.setAuthNote(EmailConstants.CODE_TTL, Long.toString(System.currentTimeMillis() + (ttl * 1000L)));
+    }
+
+    private int getCodeLength (AuthenticatorConfigModel config) {
+        return config != null ? Integer.parseInt(config.getConfig().get(EmailConstants.CODE_LENGTH)) : EmailConstants.DEFAULT_LENGTH;
+    }
+
+    private int getTtl (AuthenticatorConfigModel config) {
+        return config != null ? Integer.parseInt(config.getConfig().get(EmailConstants.CODE_TTL)) : EmailConstants.DEFAULT_TTL;
     }
 
     private void sendEmailWithCodeAsync(RealmModel realm, UserModel user, String code, int ttl) {
