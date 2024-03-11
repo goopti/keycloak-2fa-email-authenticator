@@ -40,6 +40,8 @@ public class PassthroughUsernameForm extends UsernamePasswordForm {
     UserModel user = context.getUser();
 
     String email = formData.getFirst("username");
+    log.info("email:" + email +":");
+
     boolean isInvalidEmail = !EmailValidationUtil.isValidEmail(email);
 
     if (isInvalidEmail) {
