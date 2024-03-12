@@ -10,6 +10,7 @@ public class EmailConstants {
 	public String CODE = "emailCode";
 	public String CODE_LENGTH = "length";
 	public String CODE_TTL = "ttl";
+	public String CODE_RESENT_SUCCESSFULLY_MESSAGE = "codeResentSuccessfully";
 
 	public int DEFAULT_LENGTH = 6;
 	public int DEFAULT_TTL = 300;
