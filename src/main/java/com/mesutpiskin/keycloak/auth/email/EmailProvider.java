@@ -27,16 +27,15 @@ public class EmailProvider {
     Map<String, Object> mailBodyAttributes = new HashMap<>();
     mailBodyAttributes.put("username", user.getUsername());
     mailBodyAttributes.put("code", code);
-    mailBodyAttributes.put("ttl", ttl);
+    int ttlMinutes = ttl / 60;
+    mailBodyAttributes.put("ttl", ttlMinutes);
 
-    String realmName = realm.getDisplayName() != null ? realm.getDisplayName() : realm.getName();
-    List<Object> subjectParams = List.of(realmName);
+    List<Object> subjectParams = List.of(code);
     try {
       EmailTemplateProvider emailProvider = emailTemplateProvider;
       emailProvider.setRealm(realm);
       emailProvider.setUser(user);
 
-      // Don't forget to add the welcome-email.ftl (html and text) template to your theme.
       emailProvider.send("emailCodeSubject", subjectParams, "code-email.ftl", mailBodyAttributes);
     } catch (EmailException eex) {
       log.errorf(eex, "Failed to send access code email. realm=%s user=%s", realm.getId(), user.getUsername());
